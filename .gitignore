@@ -16,4 +16,10 @@ yarn-error.log*
 !.env.example
 
 # test coverage
-coverage/ 
+coverage/
+
+# parcel cache
+.parcel-cache/
+
+# certificates
+certificates/ 
