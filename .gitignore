@@ -47,4 +47,18 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 .terraformrc
-terraform.rc 
+terraform.rc
+
+# Serverless
+.serverless/
+.webpack/
+
+# TypeScript
+*.tsbuildinfo
+
+# AWS
+.aws-sam/
+samconfig.toml
+
+# Local development
+.local/
