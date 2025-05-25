@@ -1,0 +1,59 @@
+service: chatbot-backend
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${env:REGION, 'ap-northeast-1'}
+  stage: ${env:STAGE, 'dev'}
+  environment:
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    CHAT_HISTORY_TABLE: ${self:service}-${self:provider.stage}-chat-history
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: !GetAtt ChatHistoryTable.Arn
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - 'node_modules/openai/**'
+    - 'src/**'
+    - 'package.json'
+    - 'package-lock.json'
+
+functions:
+  chat:
+    handler: src/handlers/chat.handler
+    events:
+      - http:
+          path: chat
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    ChatHistoryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-chat-history
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST 
