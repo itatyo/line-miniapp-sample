@@ -5,11 +5,13 @@ frameworkVersion: '4'
 provider:
   name: aws
   runtime: nodejs18.x
-  region: ${env:REGION, 'ap-northeast-1'}
-  stage: ${env:STAGE, 'dev'}
+  region: ap-northeast-1
+  stage: ${opt:stage, 'dev'}
   environment:
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     CHAT_HISTORY_TABLE: ${self:service}-${self:provider.stage}-chat-history
+    USER_CHAT_TABLE: ${self:service}-${self:provider.stage}-user-chat
+    USER_TABLE: ${self:service}-${self:provider.stage}-user
   iam:
     role:
       statements:
@@ -21,7 +23,22 @@ provider:
             - dynamodb:PutItem
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
-          Resource: !GetAtt ChatHistoryTable.Arn
+          Resource:
+            - !GetAtt ChatHistoryTable.Arn
+            - !GetAtt UserChatTable.Arn
+            - !GetAtt UserTable.Arn
+            - !Join ['', [!GetAtt UserChatTable.Arn, '/index/*']]
+
+custom:
+  tables:
+    ChatHistoryTable: ${self:service}-${self:provider.stage}-chat-history
+    UserChatTable: ${self:service}-${self:provider.stage}-user-chat
+    UserTable: ${self:service}-${self:provider.stage}-user
+    ChatHistoryTableArn: !GetAtt ChatHistoryTable.Arn
+    UserChatTableArn: !GetAtt UserChatTable.Arn
+    UserTableArn: !GetAtt UserTable.Arn
+  openai:
+    apiKey: ${env:OPENAI_API_KEY}
 
 package:
   patterns:
@@ -38,14 +55,102 @@ functions:
       - http:
           path: chat
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: true
+    environment:
+      CHAT_HISTORY_TABLE: ${self:custom.tables.ChatHistoryTable}
+      OPENAI_API_KEY: ${self:custom.openai.apiKey}
+
+  userChat:
+    handler: src/handlers/userChat.handler
+    events:
+      - http:
+          path: user-chat
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: true
+    environment:
+      USER_CHAT_TABLE: ${self:custom.tables.UserChatTable}
+
+  userChatHistory:
+    handler: src/handlers/userChat.getHistoryHandler
+    events:
+      - http:
+          path: user-chat-history
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: true
+    environment:
+      USER_CHAT_TABLE: ${self:custom.tables.UserChatTable}
+
+  getUsers:
+    handler: src/handlers/userChat.getUsers
+    events:
+      - http:
+          path: users
+          method: get
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: true
+    environment:
+      USER_TABLE: ${self:custom.tables.UserTable}
+
+  registerUser:
+    handler: src/handlers/userChat.registerUser
+    events:
+      - http:
+          path: register-user
+          method: post
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: true
+    environment:
+      USER_TABLE: ${self:custom.tables.UserTable}
 
 resources:
   Resources:
     ChatHistoryTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-${self:provider.stage}-chat-history
+        TableName: ${self:provider.environment.CHAT_HISTORY_TABLE}
         AttributeDefinitions:
           - AttributeName: userId
             AttributeType: S
@@ -56,4 +161,43 @@ resources:
             KeyType: HASH
           - AttributeName: timestamp
             KeyType: RANGE
-        BillingMode: PAY_PER_REQUEST 
+        BillingMode: PAY_PER_REQUEST
+
+    UserChatTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USER_CHAT_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+          - AttributeName: receiverId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: ReceiverIdIndex
+            KeySchema:
+              - AttributeName: receiverId
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USER_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST

@@ -1,64 +1,53 @@
-# dependencies
+# Dependencies
 node_modules/
+.pnp/
+.pnp.js
 
-# production
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
 build/
 dist/
+.serverless/
 
-# misc
-.DS_Store
-Thumbs.db
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# dotenv environment variables
-.env
-.env.*
-!.env.example
-
-# test coverage
-coverage/
-
-# parcel cache
-.parcel-cache/
-.cache/
-
-# certificates
-certificates/
-
-# editor
-.vscode/
+# IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 
-# Terraform
-**/.terraform/*
-*.tfstate
-*.tfstate.*
-crash.log
-crash.*.log
-*.tfvars
-!terraform.tfvars.example
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
+# OS
+.DS_Store
+Thumbs.db
 
-# Serverless
-.serverless/
-.webpack/
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
 
-# TypeScript
-*.tsbuildinfo
+# Testing
+coverage/
 
 # AWS
-.aws-sam/
-samconfig.toml
-
-# Local development
-.local/
+.aws/
+aws-exports.js
+awsconfiguration.json
+amplifyconfiguration.json
+amplifyconfiguration.dart
+amplify-build-config.json
+amplify-gradle-config.json
+amplifytools.xcconfig
+.secret-*
+**/dist
+**/build
+**/node_modules
+**/coverage
+**/.serverless
+**/.env
+**/.env.*
